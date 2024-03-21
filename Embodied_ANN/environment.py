@@ -80,7 +80,7 @@ def check_vision_of_walls(agents, i, r, ray_end_points_x, ray_end_points_y, worl
 def compute_vision(agents, entities, vision_distance, world_size):
     """Batch processing of ray casting and vision.
 
-    WARNING: HARD CODED LENGTH AND DISTANCES"""
+    WARNING: HARD-CODED LENGTH AND DISTANCES"""
 
     entities_ = agents + entities
     positions = numpy.asarray([e.position for e in entities_])
@@ -157,11 +157,17 @@ class Environment:
         cv2.putText(canvas, 'Name: ' + str(agent.name), (10, 120), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (255, 255, 255), 2)
 
+    def draw_memory(self, canvas, agent):
+        for i, m in enumerate(agent.memory):
+            color = (int(m * 255), int(m * 255), int(m * 255))
+            cv2.circle(canvas, ((1 + i) * 22, 150), 10, color, -1)
+
     def draw_and_display(self, entities, agent, score):
 
         canvas = numpy.full((self.world_size, self.world_size, 3), 100, numpy.uint8)
         self.draw_pawns(canvas, entities, [agent])
         self.draw_general_stats(canvas, score, agent)
+        self.draw_memory(canvas, agent)
 
         cv2.imshow('SNN Ecopy 10000', canvas)
         cv2.waitKey(1)
@@ -193,7 +199,7 @@ class Environment:
 
         return walls, foods + waters + spawners
 
-    def test_agent(self, agent, display=True, no_memory=False):
+    def test_agent(self, agent, display=True, no_memory=False, no_hunger_signal=False):
 
         walls, entities = self.init_entities()
         entities += walls
@@ -212,7 +218,7 @@ class Environment:
                 self.draw_and_display(entities, agent, score)
 
             # Actions
-            target = agent.do_something(walls, no_memory)
+            target = agent.do_something(walls, no_memory, no_hunger_signal)
             if target is not None:
                 entities = [e for e in entities if e.name != target.name]
                 if isinstance(target, Spawner):
@@ -223,7 +229,11 @@ class Environment:
 
         return score
 
-    def test_grid_cells(self, agent):
+    def test_agent_memory(self, agent, display=True, no_memory=False):
+
+        memories = []
+        positions = []
+        directions = []
 
         walls, entities = self.init_entities()
         entities += walls
@@ -231,22 +241,29 @@ class Environment:
         while numpy.min(cdist([agent.position], [w.position for w in walls])) < walls[0].radius * 2:
             agent.reset_position()
 
-        position = []
-        spike_trains = []
-
+        score = 0
         while agent.alive:
+
+            positions.append(agent.position)
+            directions.append(agent.direction)
+
+            # Compute vision
             compute_vision([agent], entities, self.vision_distance, self.world_size)
-            agent.receive_inputs()
+
+            # Display the environment
+            if display:
+                self.draw_and_display(entities, agent, score)
 
             # Actions
-            targets = []
-            target, spike_train = agent.do_something(walls)
+            target = agent.do_something(walls, no_memory)
+            memories.append(agent.memory)
+
             if target is not None:
-                targets.append(target)
+                entities = [e for e in entities if e.name != target.name]
+                if isinstance(target, Spawner):
+                    entities += self.spawn_food(walls, self.token_per_spawner)
+                    entities += self.spawn_water(walls, self.token_per_spawner)
 
-            entities = [e for e in entities if e.name not in targets]
+            score += 1
 
-            position.append(agent.position)
-            spike_trains.append(spike_train)
-
-        return position, spike_trains
+        return score, memories, positions, directions

@@ -3,6 +3,7 @@ import glob
 import sys
 import matplotlib.pyplot as plt
 import os
+import time
 
 from pawn import Agent
 from environment import Environment
@@ -32,18 +33,18 @@ def evolve_brains(seed):
     world_size = n_chunks * chunk_size
 
     n_starting_agents = 100
-    n_test_per_agent = 10
+    n_test_per_agent = 20
     current_best_score = 0
 
     while True:
 
         print()
 
-        previous_models = glob.glob(f"models/*__*.npy")
+        previous_models = glob.glob(f"models/*__*.pkl")
 
         if len(previous_models) > n_starting_agents:
             best_models = sorted(
-                glob.glob(f"models/*__*.npy"),
+                glob.glob(f"models/*__*.pkl"),
                 key=lambda x: int(x.split("__")[-1].split(".")[0])
             )[::-1][:10]
             current_best_score = int(best_models[0].split("__")[-1].split(".")[0])
@@ -58,20 +59,20 @@ def evolve_brains(seed):
         for e in range(n_test_per_agent):
             agent.reset()
             env = Environment(world_size, vision_distance)
-            score = env.test_agent(agent, False)
+            #t1 = time.time()
+            score = env.test_agent(agent, display=False)
             scores.append(score)
-            print(f"Epoch {e}, score {score}")
-            if score < current_best_score / 5:
-                print(f"Score {score} too low (< {current_best_score / 5}), skipping")
+            #print(f"Epoch {e}, score {score}")
+            #print(f"FPS: {score / (time.time() - t1)}")
+            if score < current_best_score / 10:
+                print(f"Score {score} too low (< {current_best_score / 10}), skipping")
                 break
-
-        mean_score = numpy.mean(scores)
-        print(f"Mean score: {mean_score}")
-
-        agent.brain.save(agent.name, round(mean_score))
+        else:
+            mean_score = numpy.mean(scores)
+            print(f"Mean score: {mean_score}")
+            agent.brain.save(agent.name, round(mean_score))
 
         del agent
-
 
 def plot_scores():
 
@@ -80,12 +81,12 @@ def plot_scores():
         y_smooth = numpy.convolve(y, box, mode='same')
         return y_smooth
 
-    for dir in ["models_OLD", "models_OLD2", "models"]:
+    for dir in ["models1", "models2", "models"]:
 
         scores = []
         max_ = []
 
-        files = list(glob.glob(f"{dir}/*__*.npy"))
+        files = list(glob.glob(f"{dir}/*__*.pkl"))
         files.sort(key=lambda x: os.path.getmtime(x))
 
         for fp in files:
@@ -103,7 +104,7 @@ def plot_scores():
         smoothing_window = 100
         indexes = list(range(len(scores)))
         #plt.plot(indexes, scores)
-        plt.plot(indexes[:-smoothing_window], smooth(scores, smoothing_window)[:-smoothing_window])
+        #plt.plot(indexes[:-smoothing_window], smooth(scores, smoothing_window)[:-smoothing_window])
         plt.plot(indexes, max_)
 
     plt.xlabel("Evaluations")
@@ -111,38 +112,6 @@ def plot_scores():
     plt.ylim(0, numpy.max(scores) + 1000)
 
     plt.show()
-
-
-def check_place_grid_cell(path):
-
-    chunk_size = 300
-    vision_distance = chunk_size
-    n_chunks = 3
-    world_size = n_chunks * chunk_size
-
-    agent = Agent(world_size, position=None, from_file=path)
-    agent.reset()
-
-    env = Environment(world_size, vision_distance)
-    position, spike_trains = env.test_grid_cells(agent)
-
-    neuron_ids = []
-    for spike_train in spike_trains:
-        if spike_train is not None:
-            neuron_ids += list(spike_train['senders'])
-    neuron_ids = set(neuron_ids)
-
-    import matplotlib.pyplot as plt
-
-    for neuron_id in neuron_ids:
-        canvas = numpy.zeros((world_size, world_size))
-        for i, (spike_train, pos) in enumerate(zip(spike_trains, position)):
-            if spike_train is not None:
-                canvas[int(pos[0]), int(pos[1])] += list(spike_train["senders"]).count(neuron_id)
-
-        plt.imshow(canvas)
-        plt.show()
-
 
 def check_no_food(path):
 
@@ -158,7 +127,40 @@ def check_no_food(path):
     env.test_agent(agent)
 
 
-def check_score(path="models/14__OOaknwVUiZvyIQ__601.npy"):
+def check_score_memory(path="models/14__OOaknwVUiZvyIQ__601.pkl", display=True):
+
+    chunk_size = 300
+    vision_distance = chunk_size
+    n_chunks = 3
+    world_size = n_chunks * chunk_size
+
+    memoriess = []
+    positionss = []
+    directionss = []
+
+    for i in range(20):
+
+        agent = Agent(world_size)
+        agent.brain.load(path)
+        agent.reset()
+        env = Environment(world_size, vision_distance)
+        score, memories, positions, directions = env.test_agent_memory(agent, True)
+
+        memoriess += memories
+        positionss += positions
+        directionss += directions
+
+        del agent
+
+    # For each memory
+    for i in range(20):
+        for e, ms in enumerate(memoriess):
+            if ms[i] > 0.5:
+                plt.scatter(positionss[e][0], positionss[e][1], c="C0")
+        plt.show()
+        plt.clf()
+
+def check_score(path="models/14__OOaknwVUiZvyIQ__601.pkl"):
 
     chunk_size = 300
     vision_distance = chunk_size
@@ -166,21 +168,21 @@ def check_score(path="models/14__OOaknwVUiZvyIQ__601.npy"):
     world_size = n_chunks * chunk_size
 
     scores = []
-    for i in range(10):
+    for i in range(100):
 
         agent = Agent(world_size)
         agent.brain.load(path)
         agent.reset()
         env = Environment(world_size, vision_distance)
-        scores.append(env.test_agent(agent, True))
+        scores.append(env.test_agent(agent, False))
+        print(scores[-1])
         del agent
 
     print(path)
     print("Scores: ", scores)
     print("Mean score: ", numpy.mean(scores))
 
-
-def check_score_ablation_recurrent(path):
+def check_score_ablation(path):
 
     chunk_size = 300
     vision_distance = chunk_size
@@ -189,23 +191,43 @@ def check_score_ablation_recurrent(path):
 
     scores = []
     scores_ablated = []
+    scores_ablated_hunger = []
+    scores_ablated_both = []
 
-    for i in range(10):
-
+    for i in range(50):
         agent = Agent(world_size)
         agent.brain.load(path)
         agent.reset()
         env = Environment(world_size, vision_distance)
-        scores.append(env.test_agent(agent, display=True, no_memory=False))
+        scores.append(env.test_agent(agent, display=False, no_memory=False))
+        print(i, scores[-1])
         del agent
 
-    for i in range(10):
-
+    for i in range(50):
         agent = Agent(world_size)
         agent.brain.load(path)
         agent.reset()
         env = Environment(world_size, vision_distance)
         scores_ablated.append(env.test_agent(agent, display=False, no_memory=True))
+        print(i, scores_ablated[-1])
+        del agent
+
+    for i in range(50):
+        agent = Agent(world_size)
+        agent.brain.load(path)
+        agent.reset()
+        env = Environment(world_size, vision_distance)
+        scores_ablated_hunger.append(env.test_agent(agent, display=False, no_memory=False, no_hunger_signal=True))
+        print(i, scores_ablated_hunger[-1])
+        del agent
+
+    for i in range(50):
+        agent = Agent(world_size)
+        agent.brain.load(path)
+        agent.reset()
+        env = Environment(world_size, vision_distance)
+        scores_ablated_both.append(env.test_agent(agent, display=False, no_memory=True, no_hunger_signal=True))
+        print(i, scores_ablated_both[-1])
         del agent
 
     print(path)
@@ -213,6 +235,10 @@ def check_score_ablation_recurrent(path):
     print("Mean score: ", numpy.mean(scores))
     print("Scores ablated: ", scores_ablated)
     print("Mean score ablated: ", numpy.mean(scores_ablated))
+    print("Scores ablated signals: ", scores_ablated_hunger)
+    print("Mean score ablated signals: ", numpy.mean(scores_ablated_hunger))
+    print("Scores ablated both: ", scores_ablated_both)
+    print("Mean score ablated both: ", numpy.mean(scores_ablated_both))
 
 
 if __name__ == "__main__":
@@ -224,9 +250,10 @@ if __name__ == "__main__":
 
     # /usr/local/opt/python@3.10/bin/python3
 
-    #check_score_ablation_recurrent("models/298__OmYURVRc9s214g__4391.npy")
+    #check_score_ablation("models/9gWCKLp73rE9_A__4248.pkl")
     #check_no_food(path=brain_path)
     #check_place_grid_cell(path=brain_path)
-    plot_scores()
-    #evolve_brains(seed=seed)
-    #check_score("models/13736__eE0Bg2XoQhKWdw__4466.npy")
+    #plot_scores()
+    evolve_brains(seed=seed)
+    #check_score_memory("models/6q6nNrUFVzV9lw__4396.pkl", True)
+    #check_score_memory("models/9gWCKLp73rE9_A__4248.pkl")

@@ -1,4 +1,5 @@
 import numpy
+import pickle
 
 
 def step(x):
@@ -33,7 +34,7 @@ class Brain():
         n_hidden=100,
     ):
 
-        self.input_size = (length_vision_vector * n_vision_rays) + n_other_inputs  + n_memory
+        self.input_size = (length_vision_vector * n_vision_rays) + n_other_inputs + n_memory
 
         self.n_hidden = n_hidden
         self.n_memory = n_memory
@@ -104,18 +105,18 @@ class Brain():
                 if isinstance(w, float):
                     tmp_rand = numpy.random.random()
                     if tmp_rand > 0.99:
-                        new_weights[i] = numpy.random.uniform(-0.5, 0.5)
+                        #new_weights[i] = numpy.random.uniform(-0.5, 0.5)
+                        new_weights[i] += numpy.random.uniform(-0.1, 0.1)
+                        #new_weights[i] += numpy.random.uniform(-0.02, 0.02)
                         n_point_mutations += 1
-                    # elif tmp_rand > 0.95:
-                    #     new_weights[i] += numpy.random.uniform(-0.1, 0.1)
                 else:
                     for j, w2 in enumerate(w):
                         tmp_rand = numpy.random.random()
                         if tmp_rand > 0.99:
-                            new_weights[i][j] = numpy.random.uniform(-0.5, 0.5)
+                            #new_weights[i][j] = numpy.random.uniform(-0.5, 0.5)
+                            new_weights[i][j] += numpy.random.uniform(-0.1, 0.1)
+                            #new_weights[i][j] += numpy.random.uniform(-0.02, 0.02)
                             n_point_mutations += 1
-                        # elif tmp_rand > 0.95:
-                        #     new_weights[i] += numpy.random.uniform(-0.1, 0.1)
             setattr(self, layer_name, new_weights)
 
         print(f"N point mutations: {n_point_mutations}")
@@ -149,11 +150,15 @@ class Brain():
         to_save.append(self.cause_of_death)
         to_save.append(self.hunger_when_eating)
         to_save.append(self.thirst_when_drinking)
-        numpy.save(f"./models/{name}__{score}.npy", to_save)
+        with open(f"./models/{name}__{score}.pkl", 'wb') as handle:
+            pickle.dump(to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        #numpy.save(f"./models/{name}__{score}.npy", to_save)
 
     def load(self, path):
 
-        new_weights = numpy.load(path, allow_pickle=True)
+        with open(path, 'rb') as handle:
+            new_weights = pickle.load(handle)
+        #new_weights = numpy.load(path, allow_pickle=True)
         for i, layer_name in enumerate(self.layer_names):
             setattr(self, layer_name, new_weights[i])
 

@@ -289,9 +289,12 @@ Initial analysis:
 - Decreased the max sensory frequency from 1000 to 100Hz
 - Increase the max connection weight to 10
 
+SNN:
+- Decrease the clamp at each time step if there is at least one spike in the last X seconds.
+- Increase the clamp is there is no spike in the last X seconds.
+
 I should use 2 different brain regions for the excitatory and inhibitory neurons.
 Right now the plasticity rule is applied to only excitatory connections.
-
 
 ### Possible directions
 - I should think about a better way to handle the excitability of the neurons (maybe some short term intrinsic excitability control)

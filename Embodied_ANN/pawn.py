@@ -177,7 +177,6 @@ class Agent(Pawn):
         self.vision_distance = 300
         self.length_vision_vector = 3
         self.n_other_info = 2
-        self.n_memory_cells = 10
         self.vision_angles = numpy.asarray([-60, -45, -30, -15, 0, 15, 30, 45, 60])
         self.vision_angles = self.vision_angles * numpy.pi / 180
         self.closest_collision_per_ray = [self.vision_distance] * self.n_vision_rays
@@ -187,8 +186,8 @@ class Agent(Pawn):
             n_vision_rays=self.n_vision_rays,
             length_vision_vector=self.length_vision_vector,
             n_other_inputs=self.n_other_info,
-            n_memory=20,
-            n_hidden=100,
+            n_memory=20,#20,
+            n_hidden=100,#100,
         )
 
         self.memory = numpy.array([0] * self.brain.n_memory)
@@ -207,6 +206,7 @@ class Agent(Pawn):
         self.hunger = 0
         self.thirst = 0
         self.alive = True
+        self.memory = numpy.array([0] * self.brain.n_memory)
 
     def draw(self, canvas, draw_vision=False):
 
@@ -248,7 +248,7 @@ class Agent(Pawn):
     def color_to_input(self, color):
         return [color[0] / 255., color[1] / 255., color[2] / 255.]
 
-    def format_observation(self, no_memory=False):
+    def format_observation(self, no_memory=False, no_hunger_signal=False):
 
         # Concatenate the colors seen by the vision rays of the retina
         observation = []
@@ -258,22 +258,22 @@ class Agent(Pawn):
             else:
                 observation += [0, 0, 0]
 
-        observation += [self.hunger / 100., self.thirst / 100.]
+        if no_hunger_signal:
+            observation += [0.5, 0.5]
+        else:
+            observation += [self.hunger / 100., self.thirst / 100.]
 
         if no_memory:
             observation += [0] * self.brain.n_memory
         else:
-            if len(self.memory) != self.brain.n_memory:
-                observation += list(self.memory) + [0]
-            else:
-                observation += list(self.memory)
+            observation += list(self.memory)
 
         return numpy.array(observation)
 
-    def do_something(self, walls, no_memory=False):
+    def do_something(self, walls, no_memory=False, no_hunger_signal=False):
 
         # Get the action from the brain
-        actions, memory = self.brain.evaluate(self.format_observation(no_memory))
+        actions, memory = self.brain.evaluate(self.format_observation(no_memory, no_hunger_signal))
 
         self.memory = memory
 

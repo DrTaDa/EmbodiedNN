@@ -336,8 +336,46 @@ Right now the plasticity rule is applied to only excitatory connections.
 
 ## 11/06/2023:
 - Go back to 100 starting inv / elite 10
-- Try with early exit when score < current_best_score / 5
-
+- Try with early exit when score < current_best_score /
 - Try -2 -2, without smaller mutations -> bof
-- Go to -0.5 +0.5, without smaller mutations ->
-- Go to -1, -1 with small changes (less frequent)
+
+## 03/02/2024
+- ANN (100 hidden, 20 memory): stagnate at around 3200 after around 40k gens
+- I need to understand why it stagnates at this performance level:
+  - Not the right parameters/meta-parameters ?
+  - That's the limit of a evolutionary algorithm ?
+
+## 04/02/2024
+- ANN small brain (50 hidden, 10 memory) -> stagnate at 2200 after around 25k gens
+- ANN big brain (200 hidden, 40 memory) -> stagnate at 17000 after 15k gens
+
+## 05/02/2024
+- Continue run ANN (100 hidden, 20 memory) with smaller mutations, like a decreasing learning rate.
+- DECREASING THE MUTATION STRENGTH DOES HELP
+- 
+## 06/02/2024:
+- Decreased it a second time and launched the simulation again -> It stopped improving
+- Be more elitist 10 -> 1 -> It does not work either.
+
+## 10/02/2024:
+- Draw the memory on screen and did some analysis that didn't work.
+
+## 13/02/2024:
+- Added ablation experiment for hunger/thirst signal
+- Increased n_test_per_agent to 20 for better sampling.
+- Don't save the agent that are skipped.
+- Relaunch simulation with the base mutation rate
+
+To Try:
+- Do I need to increase the n_test_per_agent even more ?
+- Add a second hidden layer as in my slides
+- Make a figure with:
+  - Performance of the best individual across 20 trials
+  - Performance of the best individual across 20 trials with ablation of the hunger/thirst signals
+  - Performance of the best individual across 20 trials with ablation of the memory
+- Try two eyes
+- Try moving objects
+- Add additional complexity
+- Add energy expenditure associated to memory being on ?
+- Remove variable number of neurons
+- Train the Visual network as an autoencoder or for predictive coding and evolve only the memory network ?

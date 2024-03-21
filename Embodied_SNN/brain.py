@@ -230,8 +230,8 @@ class Brain(object):
 
         self.homeostatic_frequency_rule()
 
-        print(actions)
-        print(f"Mean E_L: {numpy.mean([n.get('E_L') for n in self.networks[0]])} mV")
+        #print(actions)
+        #print(f"Mean E_L: {numpy.mean([n.get('E_L') for n in self.networks[0]])} mV")
 
         spike_trains = {'senders': [], 'times': []}
         for i in range(len(self.networks)):
